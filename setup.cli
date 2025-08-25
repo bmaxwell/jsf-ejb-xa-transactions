@@ -1,0 +1,28 @@
+echo "Configure ${serverConfig}"
+
+embed-server --server-config=${serverConfig}
+
+echo "Configure Logging"
+
+if (outcome != success) of /subsystem=logging/console-handler=CONSOLE:read-resource
+/subsystem=logging/console-handler=CONSOLE:add(level=INFO,name=COLOR-PATTERN)
+/subsystem=logging/root-logger=ROOT:add-handler(name=CONSOLE)
+end-if
+
+echo "Add Oracle JDBC Module"
+module add --name=com.oracle --resources=ojdbc8.jar --dependencies=javaee.api,sun.jdk,ibm.jdk,javax.api,javax.transaction.api
+
+echo "Add OracleXADataSource"
+/subsystem=datasources/jdbc-driver=oracle:add(driver-name=oracle,driver-module-name=com.oracle,driver-xa-datasource-class-name=oracle.jdbc.xa.client.OracleXADataSource)
+
+echo "Add OracleXADS1 username: ${db1.username} password: ${db1.password} url: ${db1.url}"
+xa-data-source add --name=OracleXADS1 --jndi-name=java:jboss/datasources/OracleXADS1 --driver-name=oracle --user-name=${db1.username} --password=${db1.password} --validate-on-match=true --background-validation=false --valid-connection-checker-class-name=org.jboss.jca.adapters.jdbc.extensions.novendor.JDBC4ValidConnectionChecker --exception-sorter-class-name=org.jboss.jca.adapters.jdbc.extensions.oracle.OracleExceptionSorter --same-rm-override=false --xa-datasource-properties={"URL"=>${db1.url}}
+
+echo "Add OracleXADS2 username: ${db2.username} password: ${db2.password} url: ${db2.url}"
+xa-data-source add --name=OracleXADS2 --jndi-name=java:jboss/datasources/OracleXADS2 --driver-name=oracle --user-name=${db2.username} --password=${db2.password} --validate-on-match=true --background-validation=false --valid-connection-checker-class-name=org.jboss.jca.adapters.jdbc.extensions.novendor.JDBC4ValidConnectionChecker --exception-sorter-class-name=org.jboss.jca.adapters.jdbc.extensions.oracle.OracleExceptionSorter --same-rm-override=false --xa-datasource-properties={"URL"=>${db2.url}}
+
+echo "Add JMS Queues"
+/subsystem=messaging-activemq/server=default/jms-queue=Queue1:add(entries=["java:/jms/queue/Queue1"])
+/subsystem=messaging-activemq/server=default/jms-queue=Queue2:add(entries=["java:/jms/queue/Queue2"])
+
+stop-embedded-server
