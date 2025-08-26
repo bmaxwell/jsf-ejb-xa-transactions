@@ -26,6 +26,11 @@
         <lookup-name>java:jboss/datasources/OracleXADS2</lookup-name>
     </resource-ref>
     <resource-ref>
+        <res-ref-name>jms/JmsXA</res-ref-name>
+        <res-type>javax.jms.XAConnectionFactory</res-type>
+        <lookup-name>java:/JmsXA</lookup-name>
+    </resource-ref>
+    <resource-ref>
         <res-ref-name>jms/Queue1</res-ref-name>
         <res-type>javax.jms.Queue</res-type>
         <lookup-name>java:/jms/queue/Queue1</lookup-name>

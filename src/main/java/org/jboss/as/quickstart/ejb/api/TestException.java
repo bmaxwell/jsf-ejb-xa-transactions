@@ -19,25 +19,25 @@ package org.jboss.as.quickstart.ejb.api;
 /**
  *
  */
-public class SingletonException extends Exception {
+public class TestException extends Exception {
 
-    public SingletonException() {
+    public TestException() {
         super();
     }
 
-    public SingletonException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
+    public TestException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
     }
 
-    public SingletonException(String message, Throwable cause) {
+    public TestException(String message, Throwable cause) {
         super(message, cause);
     }
 
-    public SingletonException(String message) {
+    public TestException(String message) {
         super(message);
     }
 
-    public SingletonException(Throwable cause) {
+    public TestException(Throwable cause) {
         super(cause);
     }
 }

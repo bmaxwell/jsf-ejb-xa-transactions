@@ -24,17 +24,8 @@ import java.io.Serializable;
  */
 public class EJBRequest implements Serializable {
 
-    private int txTimeoutSeconds = 300;
     private int sleepSeconds = 1;
-
-    public int getTxTimeoutSeconds() {
-        return txTimeoutSeconds;
-    }
-
-    public EJBRequest setTxTimeoutSeconds(int txTimeoutSeconds) {
-        this.txTimeoutSeconds = txTimeoutSeconds;
-        return this;
-    }
+    private int txTimeoutSeconds = 300;
 
     public int getSleepSeconds() {
         return sleepSeconds;
@@ -42,6 +33,15 @@ public class EJBRequest implements Serializable {
 
     public EJBRequest setSleepSeconds(int sleepSeconds) {
         this.sleepSeconds = sleepSeconds;
+        return this;
+    }
+
+    public int getTxTimeoutSeconds() {
+        return txTimeoutSeconds;
+    }
+
+    public EJBRequest setTxTimeoutSeconds(int txTimeoutSeconds) {
+        this.txTimeoutSeconds = txTimeoutSeconds;
         return this;
     }
 

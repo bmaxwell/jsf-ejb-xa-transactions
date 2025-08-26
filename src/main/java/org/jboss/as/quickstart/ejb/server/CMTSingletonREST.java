@@ -17,32 +17,51 @@
 package org.jboss.as.quickstart.ejb.server;
 
 import javax.annotation.security.PermitAll;
-import javax.ejb.Stateless;
+import javax.ejb.EJB;
 import javax.ejb.TransactionManagement;
 import javax.ejb.TransactionManagementType;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.Response;
 
 import org.jboss.as.quickstart.ejb.api.EJBRequest;
 import org.jboss.as.quickstart.ejb.api.EJBResponse;
-import org.jboss.as.quickstart.ejb.api.TestException;
 
 /**
  * @author bmaxwell
  *
  */
-@Stateless
-// @Local(TransactionSingletonEJB.class)
 @PermitAll
 @TransactionManagement(TransactionManagementType.CONTAINER)
-public class CMTSingletonEJB extends AbstractEJB {
+@Path("/cmt")
+public class CMTSingletonREST extends AbstractUtilBase {
+
+    @EJB
+    private CMTSingletonEJB cmtEJB;
 
     /**
-     * This is EJB Method that the JSF Page can call
+     * This is the REST Call if invoked using the REST interface
+     *
+     * @param placeName
+     * @param animalName
+     * @return
      */
-    public EJBResponse test(EJBRequest request, String placeName, String animalName) throws TestException {
+    @GET
+    @Path("/test")
+    @Produces({ "application/json", "text/plain" })
+    public Response testREST(@QueryParam("place") String placeName, @QueryParam("animal") String animalName) {
 
-        log.info("*** test invoked ***");
+        log.info("*** testREST invoked ***");
+        EJBRequest request = new EJBRequest();
 
-        return invokeCMT(request, placeName, animalName);
+        try {
+            EJBResponse response = cmtEJB.invokeCMT(request, placeName, animalName);
+            return Response.ok().entity(response).build();
+        } catch (Throwable t) {
+            t.printStackTrace();
+            return Response.serverError().entity(t).build();
+        }
     }
-
 }

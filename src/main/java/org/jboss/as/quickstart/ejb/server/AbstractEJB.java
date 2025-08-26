@@ -38,7 +38,7 @@ import javax.ws.rs.core.Response;
 
 import org.jboss.as.quickstart.ejb.api.EJBRequest;
 import org.jboss.as.quickstart.ejb.api.EJBResponse;
-import org.jboss.as.quickstart.ejb.api.SingletonException;
+import org.jboss.as.quickstart.ejb.api.TestException;
 import org.jboss.as.quickstart.jpa.model.Animal;
 import org.jboss.as.quickstart.jpa.model.ClearDatabases;
 import org.jboss.as.quickstart.jpa.model.ListDatabases;
@@ -63,19 +63,19 @@ public abstract class AbstractEJB extends AbstractUtilBase {
     @PersistenceContext(unitName = "database2")
     protected EntityManager em2;
 
-    @Resource(lookup = "java:jboss/datasources/OracleXADS1")
+    @Resource(name = "jdbc/datasource1")
     private DataSource xaDatasource1;
 
-    @Resource(lookup = "java:jboss/datasources/OracleXADS2")
+    @Resource(name = "jdbc/datasource2")
     private DataSource xaDatasource2;
 
-    @Resource(lookup = "java:/JmsXA")
+    @Resource(name = "jms/JmsXA")
     private XAConnectionFactory xaConnectionFactory;
 
-    @Resource(lookup = "java:/jms/queue/Queue1")
+    @Resource(name = "jms/Queue1")
     private Queue xaQueue1;
 
-    @Resource(lookup = "java:/jms/queue/Queue2")
+    @Resource(name = "jms/Queue2")
     private Queue xaQueue2;
 
     /** REST Methods shared by CMT & BMTStatelessEJBs **/
@@ -144,7 +144,7 @@ public abstract class AbstractEJB extends AbstractUtilBase {
         return ctx.getCallerPrincipal() == null ? "null" : ctx.getCallerPrincipal().getName();
     }
 
-    private EJBResponse testInternal(EJBRequest request, String placeName, String animalName) throws SingletonException {
+    private EJBResponse testInternal(EJBRequest request, String placeName, String animalName) throws TestException {
 
         log.info("*** test invoked ***");
 
@@ -192,7 +192,7 @@ public abstract class AbstractEJB extends AbstractUtilBase {
 
         } catch (Throwable t) {
             t.printStackTrace();
-            throw new SingletonException(t);
+            throw new TestException(t);
         } finally {
 
             // Switched to use JPA which manages the connections
@@ -209,11 +209,11 @@ public abstract class AbstractEJB extends AbstractUtilBase {
         return response;
     }
 
-    public EJBResponse invokeCMT(EJBRequest request, String placeName, String animalName) throws SingletonException {
+    public EJBResponse invokeCMT(EJBRequest request, String placeName, String animalName) throws TestException {
         return testInternal(request, placeName, animalName);
     }
 
-    public EJBResponse invokeBMT(EJBRequest request, String placeName, String animalName) throws SingletonException {
+    public EJBResponse invokeBMT(EJBRequest request, String placeName, String animalName) throws TestException {
 
         EJBResponse response = null;
         UserTransaction utx = null;
@@ -232,7 +232,7 @@ public abstract class AbstractEJB extends AbstractUtilBase {
             } catch (Throwable t2) {
                 t2.printStackTrace();
             }
-            throw new SingletonException(String.format("invokeBMT error running: %s", request), t);
+            throw new TestException(String.format("invokeBMT error running: %s", request), t);
         } finally {
         }
 
@@ -271,7 +271,7 @@ public abstract class AbstractEJB extends AbstractUtilBase {
         }
     }
 
-    protected EJBResponse invokeSleep(String methodName, EJBRequest request) throws SingletonException {
+    protected EJBResponse invokeSleep(String methodName, EJBRequest request) throws TestException {
 
         log.info(methodName + " start " + request.getSleepSeconds() + " sec sleep");
         sleep(request.getSleepSeconds());
