@@ -14,35 +14,31 @@
  * limitations under the License.
  */
 
-package org.jboss.as.quickstart.ejb.server;
+package org.jboss.as.quickstart.ejb.server.rest;
 
 import javax.annotation.security.PermitAll;
-import javax.ejb.Stateless;
+import javax.ejb.EJB;
 import javax.ejb.TransactionManagement;
 import javax.ejb.TransactionManagementType;
+import javax.ws.rs.Path;
 
-import org.jboss.as.quickstart.ejb.api.EJBRequest;
-import org.jboss.as.quickstart.ejb.api.EJBResponse;
-import org.jboss.as.quickstart.ejb.api.TestException;
+import org.jboss.as.quickstart.ejb.api.TransactionEJB;
+import org.jboss.as.quickstart.ejb.server.AbstractREST;
 
 /**
  * @author bmaxwell
  *
  */
-@Stateless
-// @Local(TransactionSingletonEJB.class)
 @PermitAll
 @TransactionManagement(TransactionManagementType.CONTAINER)
-public class CMTSingletonEJB extends AbstractEJB {
+@Path("/cmt")
+public class CMTSingletonREST extends AbstractREST {
 
-    /**
-     * This is EJB Method that the JSF Page can call
-     */
-    public EJBResponse test(EJBRequest request, String placeName, String animalName) throws TestException {
+    @EJB(beanName = "CMTEJB")
+    private TransactionEJB cmtEJB;
 
-        log.info("*** test invoked ***");
-
-        return invokeCMT(request, placeName, animalName);
+    @Override
+    protected TransactionEJB getEJB() {
+        return cmtEJB;
     }
-
 }

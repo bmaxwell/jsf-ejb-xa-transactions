@@ -14,33 +14,28 @@
  * limitations under the License.
  */
 
-package org.jboss.as.quickstart.ejb.server;
+package org.jboss.as.quickstart.ejb.server.ejb;
 
 import javax.annotation.security.PermitAll;
+import javax.ejb.Local;
 import javax.ejb.Stateless;
 import javax.ejb.TransactionManagement;
 import javax.ejb.TransactionManagementType;
 
-import org.jboss.as.quickstart.ejb.api.EJBRequest;
-import org.jboss.as.quickstart.ejb.api.EJBResponse;
-import org.jboss.as.quickstart.ejb.api.TestException;
+import org.jboss.as.quickstart.ejb.api.TransactionEJB;
+import org.jboss.as.quickstart.ejb.server.AbstractEJB;
 
 /**
  * @author bmaxwell
  *
  */
-@Stateless
-// @Local(TransactionSingletonEJB.class)
+@Stateless(name = "BMTEJB")
+@Local(TransactionEJB.class)
 @PermitAll
 @TransactionManagement(TransactionManagementType.BEAN)
-public class BMTSingletonEJB extends AbstractEJB {
+public class BMTEJB extends AbstractEJB implements TransactionEJB {
 
-    /**
-     * This is EJB Method that the JSF Page can call
-     */
-    public EJBResponse test(EJBRequest request, String placeName, String animalName) throws TestException {
-
-        log.info("*** test invoked ***");
-        return invokeBMT(request, placeName, animalName);
+    public BMTEJB() {
+        super(TransactionManagementType.BEAN);
     }
 }

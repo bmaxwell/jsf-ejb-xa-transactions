@@ -61,8 +61,8 @@ public class Config implements Serializable, Comparable<Config> {
         txTimeouts.add(new SelectItem(330));
     }
 
-    private static String BMT_EJB_NAME = "BMTSingletonEJB";
-    private static String CMT_EJB_NAME = "CMTSingletonEJB";
+    private static String BMT_EJB_NAME = "BMTEJB";
+    private static String CMT_EJB_NAME = "CMTEJB";
 
     private boolean remote = false;
     private String host = "localhost";

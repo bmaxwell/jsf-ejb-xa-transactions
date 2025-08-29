@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.jboss.as.quickstart.ejb.server;
+package org.jboss.as.quickstart.ejb.server.rest;
 
 import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.core.Application;
