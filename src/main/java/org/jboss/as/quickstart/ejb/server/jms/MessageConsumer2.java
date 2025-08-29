@@ -14,18 +14,20 @@
  * limitations under the License.
  */
 
-package org.jboss.as.quickstart.ejb.server;
+package org.jboss.as.quickstart.ejb.server.jms;
 
-import javax.ejb.ActivationConfigProperty;
-import javax.ejb.MessageDriven;
-import javax.jms.MessageListener;
+import org.jboss.as.quickstart.ejb.server.AbstractMessageConsumer;
+
+import jakarta.ejb.ActivationConfigProperty;
+import jakarta.ejb.MessageDriven;
+import jakarta.jms.MessageListener;
 
 /**
  *
  */
-@MessageDriven(name = "MessageConsumer1", activationConfig = {
-        @ActivationConfigProperty(propertyName = "destinationType", propertyValue = "javax.jms.Queue"),
-        @ActivationConfigProperty(propertyName = "destination", propertyValue = "java:comp/env/jms/Queue1"),
+@MessageDriven(name = "MessageConsumer2", activationConfig = {
+        @ActivationConfigProperty(propertyName = "destinationType", propertyValue = "jakarta.jms.Queue"),
+        @ActivationConfigProperty(propertyName = "destination", propertyValue = "java:comp/env/jms/Queue2"),
         @ActivationConfigProperty(propertyName = "acknowledgeMode", propertyValue = "Auto-acknowledge") })
-public class MessageConsumer1 extends AbstractMessageConsumer implements MessageListener {
+public class MessageConsumer2 extends AbstractMessageConsumer implements MessageListener {
 }

@@ -19,38 +19,38 @@ package org.jboss.as.quickstart.ejb.server;
 import java.util.List;
 import java.util.logging.Logger;
 
-import javax.annotation.Resource;
-import javax.annotation.security.PermitAll;
-import javax.ejb.SessionContext;
-import javax.jms.JMSProducer;
-import javax.jms.Queue;
-import javax.jms.TextMessage;
-import javax.jms.XAConnectionFactory;
-import javax.jms.XAJMSContext;
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
 import javax.sql.DataSource;
-import javax.transaction.UserTransaction;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.Response;
 
 import org.jboss.as.quickstart.ejb.api.EJBRequest;
 import org.jboss.as.quickstart.ejb.api.EJBResponse;
 import org.jboss.as.quickstart.ejb.api.TestException;
+import org.jboss.as.quickstart.ejb.api.TransactionEJB;
 import org.jboss.as.quickstart.jpa.model.Animal;
 import org.jboss.as.quickstart.jpa.model.ClearDatabases;
 import org.jboss.as.quickstart.jpa.model.ListDatabases;
 import org.jboss.as.quickstart.jpa.model.Place;
+
+import jakarta.annotation.Resource;
+import jakarta.annotation.security.PermitAll;
+import jakarta.ejb.SessionContext;
+import jakarta.ejb.TransactionManagementType;
+import jakarta.jms.JMSProducer;
+import jakarta.jms.Queue;
+import jakarta.jms.TextMessage;
+import jakarta.jms.XAConnectionFactory;
+import jakarta.jms.XAJMSContext;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.transaction.UserTransaction;
 
 /**
  * @author bmaxwell
  *
  */
 @PermitAll
-public abstract class AbstractEJB extends AbstractUtilBase {
+public abstract class AbstractEJB extends AbstractUtilBase implements TransactionEJB {
 
+    protected TransactionManagementType txManagementType;
     protected Logger log = Logger.getLogger(getClass().getSimpleName());
     protected static String JBOSS_NODE_NAME = System.getProperty("jboss.node.name");
 
@@ -78,210 +78,197 @@ public abstract class AbstractEJB extends AbstractUtilBase {
     @Resource(name = "jms/Queue2")
     private Queue xaQueue2;
 
-    /** REST Methods shared by CMT & BMTStatelessEJBs **/
-    /***************************************************/
-    @GET
-    @Path("/list")
-    @Produces({ "application/json", "text/plain" })
-    public Response listREST() {
-
-        log.info("*** listREST invoked ***");
-
-        try {
-            return Response.ok().entity(list()).build();
-        } catch (Throwable t) {
-            t.printStackTrace();
-            return Response.serverError().entity(t).build();
-        }
+    public AbstractEJB(TransactionManagementType txManagementType) {
+        this.txManagementType = txManagementType;
     }
 
-    @GET
-    @Path("/clear")
-    @Produces({ "application/json", "text/plain" })
-    public Response clearAllDatabasesREST() {
-
-        log.info("*** clearAllDatabasesREST invoked ***");
-
-        try {
-            return Response.ok().entity(clearAllDatabases()).build();
-        } catch (Throwable t) {
-            t.printStackTrace();
-            return Response.serverError().entity(t).build();
-        }
+    protected boolean isBMT() {
+        return this.txManagementType == TransactionManagementType.BEAN;
     }
 
-    public ListDatabases list() throws Exception {
+    @FunctionalInterface
+    public interface ThrowingSupplier<T> {
+        T get() throws TestException;
+    }
+
+    /**
+     * Invoke the method, if it is BMT then call UTX to start/commit a tx, else, it is CMT
+     *
+     * @param op
+     * @return
+     * @throws TestException
+     */
+    private Object invoke(ThrowingSupplier op) throws TestException {
+
+        log.info("invoke isBMT: " + isBMT());
+
+        Object ret = null;
+
+        if (isBMT()) {
+
+            UserTransaction utx = null;
+            try {
+                utx = ctx.getUserTransaction();
+                utx.begin();
+
+                // do work
+                ret = op.get();
+
+            } catch (TestException te) {
+                throw te;
+            } catch (Throwable t) {
+                t.printStackTrace();
+                try {
+                    if (utx != null)
+                        utx.rollback();
+                } catch (Throwable t2) {
+                    t2.printStackTrace();
+                }
+                throw new TestException(String.format("invokeBMT error"), t);
+            } finally {
+                try {
+                    if (utx != null)
+                        utx.commit();
+                } catch (Throwable t) {
+                    t.printStackTrace();
+                }
+            }
+        } else {
+            ret = op.get();
+        }
+
+        return ret;
+    }
+
+    @Override
+    public ListDatabases list() throws TestException {
 
         log.info("*** list invoked ***");
 
-        try {
-            ListDatabases ld = new ListDatabases();
-            ld.setPlaceDatabase1(getAllPlacesDatabase1());
-            ld.setAnimalDatabase2(getAllAnimalsDatabase2());
-            return ld;
-        } catch (Throwable t) {
-            t.printStackTrace();
-            throw t;
-        }
+        ThrowingSupplier<ListDatabases> listDatabasesSupplier = new ThrowingSupplier<ListDatabases>() {
+            @Override
+            public ListDatabases get() throws TestException {
+                ListDatabases ld = new ListDatabases();
+                ld.setPlaceDatabase1(getAllFromDatabase(em1, "Place", Place.class));
+                ld.setAnimalDatabase2(getAllFromDatabase(em2, "Animal", Animal.class));
+                return ld;
+            }
+        };
+
+        return (ListDatabases) invoke(listDatabasesSupplier);
     }
 
-    public ClearDatabases clearAllDatabases() throws Exception {
+    @Override
+    public EJBResponse test(EJBRequest request, String placeName, String animalName) throws TestException {
+
+        log.info("*** test invoked ***");
+
+        ThrowingSupplier<EJBResponse> testSupplier = new ThrowingSupplier<EJBResponse>() {
+            @Override
+            public EJBResponse get() throws TestException {
+
+                XAJMSContext xaJMSContext = null;
+
+                EJBResponse response = new EJBResponse();
+
+                try {
+
+                    Place place = (placeName == null || placeName.isEmpty()) ? Place.randomPlace() : new Place(placeName);
+                    Animal animal = (animalName == null || animalName.isEmpty()) ? Animal.randomAnimal()
+                            : new Animal(animalName);
+
+                    // save Place , Animal, have the MessageConsumers update something to indicate they have been processed.
+
+                    em1.joinTransaction();
+                    em2.joinTransaction();
+
+                    em1.persist(place);
+                    response.addStepCompleted("EntityManager1.persist: " + place);
+
+                    em2.persist(animal);
+                    response.addStepCompleted("EntityManager2.persist: " + animal);
+
+                    // send the Place / Animal to the JMS Consumers
+
+                    xaJMSContext = xaConnectionFactory.createXAContext();
+                    // xaJMSContext = getXAConnectionFactory().createXAContext();
+                    response.addStepCompleted("Got xaConnectionFactory xaContext: " + xaJMSContext);
+
+                    // send jms message to xaQueue1 start
+                    JMSProducer xaJMSproducer = xaJMSContext.createProducer();
+                    response.addStepCompleted("Got xaJMSproducer: " + xaJMSproducer);
+
+                    TextMessage xaJMSmessage1 = xaJMSContext
+                            .createTextMessage(String.format("Send Place %s to Datasource1", place));
+                    response.addStepCompleted("Created xaJMSmessage1: " + xaJMSmessage1);
+
+                    xaJMSproducer.send(xaQueue1, xaJMSmessage1);
+                    response.addStepCompleted("Send xaJMSmessage1: " + xaJMSmessage1 + " to queue: " + xaQueue1);
+                    // send jms message to xaQueue1 end
+
+                    // send jms message to xaQueue2 start
+                    TextMessage xaJMSmessage2 = xaJMSContext
+                            .createTextMessage(String.format("Send Place %s to Datasource2", animal));
+                    response.addStepCompleted("Created xaJMSmessage2: " + xaJMSmessage2);
+                    xaJMSproducer.send(xaQueue2, xaJMSmessage2);
+
+                    response.addStepCompleted("Send xaJMSmessage2: " + xaJMSmessage2 + " to queue: " + xaQueue2);
+                    // send jms message to xaQueue2 end
+
+                } catch (Throwable t) {
+                    t.printStackTrace();
+                    throw new TestException(t);
+                } finally {
+                    safeClose(xaJMSContext);
+                    response.addStepCompleted("Closed xaJMSContext");
+                }
+                return response;
+            }
+        };
+
+        return (EJBResponse) invoke(testSupplier);
+    }
+
+    @Override
+    public ClearDatabases clearAllDatabases() throws TestException {
 
         log.info("*** clearAllDatabases invoked ***");
 
-        ClearDatabases cd = new ClearDatabases();
-        try {
-            cd.setPlaceDatabase1(String.format("Removed %d Places", clearDatabase1()));
-            cd.setAnimalDatabase2(String.format("Removed %d Animals", clearDatabase2()));
-        } catch (Throwable t) {
-            t.printStackTrace();
-            throw t;
-        }
-        return cd;
+        ThrowingSupplier<ClearDatabases> clearDatabasesSupplier = new ThrowingSupplier<ClearDatabases>() {
+            @Override
+            public ClearDatabases get() throws TestException {
+                ClearDatabases cd = new ClearDatabases();
+                try {
+                    cd.setPlaceDatabase1(String.format("Removed %d Places", clearDatabase(em1, "Place")));
+                    cd.setAnimalDatabase2(String.format("Removed %d Animals", clearDatabase(em2, "Animal")));
+                } catch (Throwable t) {
+                    t.printStackTrace();
+                    throw new TestException(t);
+                }
+                return cd;
+            }
+        };
+
+        return (ClearDatabases) invoke(clearDatabasesSupplier);
     }
 
     protected String getCaller() {
         return ctx.getCallerPrincipal() == null ? "null" : ctx.getCallerPrincipal().getName();
     }
 
-    private EJBResponse testInternal(EJBRequest request, String placeName, String animalName) throws TestException {
-
-        log.info("*** test invoked ***");
-
-        XAJMSContext xaJMSContext = null;
-
-        EJBResponse response = new EJBResponse();
-
+    private int clearDatabase(EntityManager entityManager, String col) {
         try {
-
-            Place place = (placeName == null || placeName.isEmpty()) ? Place.randomPlace() : new Place(placeName);
-            Animal animal = (animalName == null || animalName.isEmpty()) ? Animal.randomAnimal() : new Animal(animalName);
-
-            // save Place , Animal, have the MessageConsumers update something to indicate they have been processed.
-
-            em1.persist(place);
-            response.addStepCompleted("EntityManager1.persist: " + place);
-
-            em2.persist(animal);
-            response.addStepCompleted("EntityManager2.persist: " + animal);
-
-            // send the Place / Animal to the JMS Consumers
-
-            xaJMSContext = xaConnectionFactory.createXAContext();
-            // xaJMSContext = getXAConnectionFactory().createXAContext();
-            response.addStepCompleted("Got xaConnectionFactory xaContext: " + xaJMSContext);
-
-            // send jms message to xaQueue1 start
-            JMSProducer xaJMSproducer = xaJMSContext.createProducer();
-            response.addStepCompleted("Got xaJMSproducer: " + xaJMSproducer);
-
-            TextMessage xaJMSmessage1 = xaJMSContext.createTextMessage(String.format("Send Place %s to Datasource1", place));
-            response.addStepCompleted("Created xaJMSmessage1: " + xaJMSmessage1);
-
-            xaJMSproducer.send(xaQueue1, xaJMSmessage1);
-            response.addStepCompleted("Send xaJMSmessage1: " + xaJMSmessage1 + " to queue: " + xaQueue1);
-            // send jms message to xaQueue1 end
-
-            // send jms message to xaQueue2 start
-            TextMessage xaJMSmessage2 = xaJMSContext.createTextMessage(String.format("Send Place %s to Datasource2", animal));
-            response.addStepCompleted("Created xaJMSmessage2: " + xaJMSmessage2);
-            xaJMSproducer.send(xaQueue2, xaJMSmessage2);
-
-            response.addStepCompleted("Send xaJMSmessage2: " + xaJMSmessage2 + " to queue: " + xaQueue2);
-            // send jms message to xaQueue2 end
-
-        } catch (Throwable t) {
-            t.printStackTrace();
-            throw new TestException(t);
-        } finally {
-
-            // Switched to use JPA which manages the connections
-            // safeClose(conn1);
-            // response.addStepCompleted("Closed conn1");
-
-            // safeClose(conn2);
-            // response.addStepCompleted("Closed conn2");
-
-            safeClose(xaJMSContext);
-            response.addStepCompleted("Closed xaJMSContext");
-        }
-
-        return response;
-    }
-
-    public EJBResponse invokeCMT(EJBRequest request, String placeName, String animalName) throws TestException {
-        return testInternal(request, placeName, animalName);
-    }
-
-    public EJBResponse invokeBMT(EJBRequest request, String placeName, String animalName) throws TestException {
-
-        EJBResponse response = null;
-        UserTransaction utx = null;
-        try {
-            utx = ctx.getUserTransaction();
-            utx.setTransactionTimeout(request.getTxTimeoutSeconds());
-            utx.begin();
-
-            response = testInternal(request, placeName, animalName);
-
-            utx.commit();
-        } catch (Throwable t) {
-            t.printStackTrace();
-            try {
-                utx.rollback();
-            } catch (Throwable t2) {
-                t2.printStackTrace();
-            }
-            throw new TestException(String.format("invokeBMT error running: %s", request), t);
-        } finally {
-        }
-
-        return response;
-    }
-
-    public int clearDatabase1() {
-        try {
-            return em1.createQuery("DELETE FROM Place").executeUpdate();
+            return entityManager.createQuery(String.format("DELETE FROM %s", col)).executeUpdate();
         } catch (Throwable t) {
             throw t;
         }
     }
 
-    public int clearDatabase2() {
+    public <T> List<T> getAllFromDatabase(EntityManager entityManger, String col, Class clazz) {
         try {
-            return em2.createQuery("DELETE FROM Animal").executeUpdate();
+            return entityManger.createQuery(String.format("SELECT x FROM %s x", col), clazz).getResultList();
         } catch (Throwable t) {
             throw t;
         }
     }
-
-    public List<Place> getAllPlacesDatabase1() {
-        try {
-            return em1.createQuery("FROM Place", Place.class).getResultList();
-        } catch (Throwable t) {
-            throw t;
-        }
-    }
-
-    public List<Animal> getAllAnimalsDatabase2() {
-        try {
-            return em2.createQuery("FROM Animal", Animal.class).getResultList();
-        } catch (Throwable t) {
-            throw t;
-        }
-    }
-
-    protected EJBResponse invokeSleep(String methodName, EJBRequest request) throws TestException {
-
-        log.info(methodName + " start " + request.getSleepSeconds() + " sec sleep");
-        sleep(request.getSleepSeconds());
-        log.info(methodName + " finished " + request.getSleepSeconds() + " sec sleep");
-
-        return createResopnse(request, methodName);
-    }
-
-    private EJBResponse createResopnse(EJBRequest request, String methodName) {
-        return new EJBResponse(request, JBOSS_NODE_NAME, getCaller(), methodName);
-    }
-
 }

@@ -5,7 +5,7 @@
     version="4.0">
     <servlet>
         <servlet-name>Faces Servlet</servlet-name>
-        <servlet-class>javax.faces.webapp.FacesServlet</servlet-class>
+        <servlet-class>jakarta.faces.webapp.FacesServlet</servlet-class>
         <load-on-startup>1</load-on-startup>
     </servlet>
     <servlet-mapping>
@@ -27,17 +27,17 @@
     </resource-ref>
     <resource-ref>
         <res-ref-name>jms/JmsXA</res-ref-name>
-        <res-type>javax.jms.XAConnectionFactory</res-type>
+        <res-type>jakarta.jms.XAConnectionFactory</res-type>
         <lookup-name>java:/JmsXA</lookup-name>
     </resource-ref>
     <resource-ref>
         <res-ref-name>jms/Queue1</res-ref-name>
-        <res-type>javax.jms.Queue</res-type>
+        <res-type>jakarta.jms.Queue</res-type>
         <lookup-name>java:/jms/queue/Queue1</lookup-name>
     </resource-ref>
     <resource-ref>
         <res-ref-name>jms/Queue2</res-ref-name>
-        <res-type>javax.jms.Queue</res-type>
+        <res-type>jakarta.jms.Queue</res-type>
         <lookup-name>java:/jms/queue/Queue2</lookup-name>
     </resource-ref>
 </web-app>

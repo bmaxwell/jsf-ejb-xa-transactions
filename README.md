@@ -1,6 +1,6 @@
 # jsf-ejb-xa-transactions
 
-- This is a Jakarta EE 8 example application, which provides some REST endpoints which insert into 2 different XA database datasources and sends a JMS Message to 2 different Queues to test XA.  It has a list method that returns the values in the databases and methods to remove the entries from the database.
+- This is a Jakarta EE 10 example application, which provides some REST endpoints which insert into 2 different XA database datasources and sends a JMS Message to 2 different Queues to test XA.  It has a list method that returns the values in the databases and methods to remove the entries from the database.
 
 The example uses standard portable Jakarta EE APIs, the only JBoss specifics are:
 
@@ -39,6 +39,13 @@ The example uses standard portable Jakarta EE APIs, the only JBoss specifics are
 
 # Setup
 
+## Requirements
+
+- JBoss EAP 8.1
+- Oracle JDK 17 or 21 / OpenJDK 17 or 21
+- Oracle JDBC driver jar
+- Oracle Database
+
 ## Configure Database for XA Recovery
 
 For EAP XA Recovery to run, the permissions below need to be granted to the Database user that is used when EAP connects.  (This can be the username in the XA datasource configuration or you can specify a different user for recovery in the EAP datasource configuration).
@@ -55,7 +62,7 @@ GRANT EXECUTE ON sys.dbms_xa TO user;
 ## Unzip JBoss EAP
 
 ~~~
-unzip -d $JBOSS_HOME jboss-eap-7.4.0.zip
+unzip -d $JBOSS_HOME jboss-eap-8.1.0.zip
 ~~~
 
 ## Configure JBoss EAP

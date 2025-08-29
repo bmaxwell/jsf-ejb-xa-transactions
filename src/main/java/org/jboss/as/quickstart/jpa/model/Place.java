@@ -2,13 +2,13 @@ package org.jboss.as.quickstart.jpa.model;
 
 import java.util.Random;
 
-import javax.json.bind.annotation.JsonbProperty;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.SequenceGenerator;
-import javax.persistence.Table;
+import jakarta.json.bind.annotation.JsonbProperty;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+import jakarta.persistence.SequenceGenerator;
+import jakarta.persistence.Table;
 
 @Entity(name = "Place")
 @Table(name = "PLACE_TABLE")

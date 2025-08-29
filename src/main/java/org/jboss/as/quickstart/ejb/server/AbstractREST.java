@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Red Hat, Inc.
+ * Copyright 2025 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,27 +16,25 @@
 
 package org.jboss.as.quickstart.ejb.server;
 
-import javax.annotation.security.PermitAll;
-import javax.ejb.EJB;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
-import javax.ws.rs.core.Response;
-
 import org.jboss.as.quickstart.ejb.api.EJBRequest;
 import org.jboss.as.quickstart.ejb.api.EJBResponse;
+import org.jboss.as.quickstart.ejb.api.TransactionEJB;
+
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.Response;
 
 /**
- * @author bmaxwell
  *
  */
-@PermitAll
-@Path("/bmt")
-public class BMTSingletonREST extends AbstractUtilBase {
+public abstract class AbstractREST extends AbstractUtilBase {
 
-    @EJB
-    private BMTSingletonEJB bmtEJB;
+    protected abstract TransactionEJB getEJB();
+
+    /** REST Methods shared by CMT & BMTStatelessEJBs **/
+    /***************************************************/
 
     /**
      * This is the REST Call if invoked using the REST interface
@@ -54,8 +52,38 @@ public class BMTSingletonREST extends AbstractUtilBase {
         EJBRequest request = new EJBRequest();
 
         try {
-            EJBResponse response = bmtEJB.invokeBMT(request, placeName, animalName);
+            EJBResponse response = getEJB().test(request, placeName, animalName);
             return Response.ok().entity(response).build();
+        } catch (Throwable t) {
+            t.printStackTrace();
+            return Response.serverError().entity(t).build();
+        }
+    }
+
+    @GET
+    @Path("/list")
+    @Produces({ "application/json", "text/plain" })
+    public Response listREST() {
+
+        log.info("*** listREST invoked ***");
+
+        try {
+            return Response.ok().entity(getEJB().list()).build();
+        } catch (Throwable t) {
+            t.printStackTrace();
+            return Response.serverError().entity(t).build();
+        }
+    }
+
+    @GET
+    @Path("/clear")
+    @Produces({ "application/json", "text/plain" })
+    public Response clearAllDatabasesREST() {
+
+        log.info("*** clearAllDatabasesREST invoked ***");
+
+        try {
+            return Response.ok().entity(getEJB().clearAllDatabases()).build();
         } catch (Throwable t) {
             t.printStackTrace();
             return Response.serverError().entity(t).build();

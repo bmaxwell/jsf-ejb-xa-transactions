@@ -1,7 +1,7 @@
 package org.jboss.as.quickstart.jsf.util;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.faces.annotation.FacesConfig;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.faces.annotation.FacesConfig;
 
 @FacesConfig
 @ApplicationScoped

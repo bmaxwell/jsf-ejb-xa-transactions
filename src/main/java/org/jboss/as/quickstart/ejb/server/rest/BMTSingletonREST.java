@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Red Hat, Inc.
+ * Copyright 2022 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,28 @@
  * limitations under the License.
  */
 
-package org.jboss.as.quickstart.ejb.server;
+package org.jboss.as.quickstart.ejb.server.rest;
 
-import javax.ws.rs.ApplicationPath;
-import javax.ws.rs.core.Application;
+import org.jboss.as.quickstart.ejb.api.TransactionEJB;
+import org.jboss.as.quickstart.ejb.server.AbstractREST;
+
+import jakarta.annotation.security.PermitAll;
+import jakarta.ejb.EJB;
+import jakarta.ws.rs.Path;
 
 /**
+ * @author bmaxwell
  *
  */
-@ApplicationPath("/rest")
-public class JAXRSApplication extends Application {
+@PermitAll
+@Path("/bmt")
+public class BMTSingletonREST extends AbstractREST {
+
+    @EJB(beanName = "BMTEJB")
+    private TransactionEJB bmtEJB;
+
+    @Override
+    protected TransactionEJB getEJB() {
+        return bmtEJB;
+    }
 }

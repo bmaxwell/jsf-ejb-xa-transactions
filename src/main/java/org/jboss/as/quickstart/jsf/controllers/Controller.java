@@ -23,21 +23,21 @@ import java.lang.management.ManagementFactory;
 import java.security.Principal;
 import java.util.logging.Logger;
 
-import javax.annotation.PostConstruct;
-import javax.ejb.EJB;
-import javax.enterprise.context.RequestScoped;
-import javax.enterprise.inject.Model;
-import javax.faces.context.FacesContext;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
 import org.jboss.as.quickstart.ejb.api.EJBRequest;
 import org.jboss.as.quickstart.ejb.api.EJBResponse;
-import org.jboss.as.quickstart.ejb.server.BMTSingletonEJB;
-import org.jboss.as.quickstart.ejb.server.CMTSingletonEJB;
+import org.jboss.as.quickstart.ejb.api.TransactionEJB;
 import org.jboss.as.quickstart.jpa.model.ClearDatabases;
 import org.jboss.as.quickstart.jpa.model.ListDatabases;
 import org.jboss.as.quickstart.jsf.util.Config;
+
+import jakarta.annotation.PostConstruct;
+import jakarta.ejb.EJB;
+import jakarta.enterprise.context.RequestScoped;
+import jakarta.enterprise.inject.Model;
+import jakarta.faces.context.FacesContext;
 
 /**
  * The @Model stereotype is a convenience mechanism to make this a request-scoped bean that has an EL name
@@ -48,11 +48,11 @@ public class Controller implements Serializable {
 
     protected Logger log = Logger.getLogger(this.getClass().getSimpleName());
 
-    @EJB
-    private CMTSingletonEJB cmtEJB;
+    @EJB(beanName = "CMTEJB")
+    private TransactionEJB cmtEJB;
 
-    @EJB
-    private BMTSingletonEJB bmtEJB;
+    @EJB(beanName = "BMTEJB")
+    private TransactionEJB bmtEJB;
 
     private Config config;
     private String error;
